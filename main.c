@@ -38,10 +38,11 @@ typedef struct rel_album
 
 void readCSV();
 int addFinal();
+void CreateFile();
 
 int main()
 {
-    // CreateFile();       // Criar arquivos para armazenar os dados]
+    CreateFile();       // Criar arquivos para armazenar os dados]
     Default *DefaultList = NULL;
     while (1)
     {
@@ -128,3 +129,11 @@ int addFinal(Default **head, int idUsuario, int idMusica, int idAlbum, int timeS
         return 0;
     }
 }
+
+void CreateFile()
+{
+    FILE *file = fopen("usuario_musica.csv", "w");
+    fprintf(file, "idUsuario,idMusica,idAlbum,numPlays\n");
+    fclose(file);
+}
+
