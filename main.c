@@ -39,15 +39,20 @@ typedef struct rel_album
 void readCSV();
 int addTailDefault();
 int addTailUser();
-void CreateFile();
+int addTailMusic();
 void writeUser();
 void processRelUser();
-void writeUser();
+void processRelMusic();
+void freeDefaultList();
+void freeUserList();
+void writeMusic();
 
 int main()
 {
-    CreateFile(); // Criar arquivos para armazenar os dados]
     Default *DefaultList = NULL;
+    User *UserList = NULL;
+    Music *MusicList = NULL;
+    Album *AlbumList = NULL;
 
     while (1)
     {
@@ -67,8 +72,10 @@ int main()
             printf("Digite o nome do arquivo: ");
             scanf("%s", input);
             readCSV(input, &DefaultList);
-            //writeOrder(DefaultList);
-            processRelUser(&DefaultList);
+            processRelUser(&DefaultList, &UserList);
+            writeUser(UserList);
+            processRelMusic(&UserList, &MusicList);
+            writeMusic(MusicList);
             printf("Carga realizada com sucesso!\n");
         }
     }
@@ -99,47 +106,90 @@ void readCSV(char filename[100], Default **list)
         fscanf(file, "%d;%d;%d;%d\n", &idUsuario, &idMusica, &idAlbum, &timeStamp);
         addTailDefault(list, &tail, idUsuario, idMusica, idAlbum, timeStamp);
         cont++;
-        printf("Linha %d lida.\n", cont);
+        // printf("Linha %d lida.\n", cont);
     }
     fclose(file);
 }
 
 int addTailDefault(Default **head, Default **tail, int idUsuario, int idMusica, int idAlbum, int timeStamp)
 {
+
     Default *newNode = malloc(sizeof(Default));
 
     if (newNode != NULL)
-    {
+    { // testa se memoria foi alocada
         newNode->idUsuario = idUsuario;
         newNode->idMusica = idMusica;
         newNode->idAlbum = idAlbum;
         newNode->timeStamp = timeStamp;
         newNode->next = NULL;
 
+        // caso 1: lista vazia
         if (*head == NULL)
         {
             *head = newNode;
-            *tail = newNode;
         }
         else
-        {
-            (*tail)->next = newNode;
-            *tail = newNode;
+        { // caso 2: lista jah contem pelo menos 1 elemento
+            // busca posicao correta (ordenacao do menor p/ maior)
+            Default *current = *head, *prevNode = NULL;
+            while (current != NULL && current->idUsuario > idUsuario)
+            {
+                // passa para o proximo elemento
+                prevNode = current;
+                current = current->next;
+            }
+
+            // insere elemento entre nó anterior e nó atual
+            if (prevNode != NULL)
+            { // caso A: insercao no meio
+                prevNode->next = newNode;
+                newNode->next = current;
+            }
+            else
+            { // caso B: insercao no inicio
+                newNode->next = *head;
+                *head = newNode;
+            }
         }
-        return 1;
+
+        return 1; // sucesso
     }
     else
     {
-        return 0;
+        return 0; // sem memoria
     }
 }
 
-void CreateFile()
-{
-    FILE *file = fopen("usuario_musica.csv", "w");
-    fprintf(file, "idUsuario,idMusica,idAlbum,numPlays\n");
-    fclose(file);
-}
+// int addTailDefault(Default **head, Default **tail, int idUsuario, int idMusica, int idAlbum, int timeStamp)
+// {
+//     Default *newNode = malloc(sizeof(Default));
+
+//     if (newNode != NULL)
+//     {
+//         newNode->idUsuario = idUsuario;
+//         newNode->idMusica = idMusica;
+//         newNode->idAlbum = idAlbum;
+//         newNode->timeStamp = timeStamp;
+//         newNode->next = NULL;
+
+//         if (*head == NULL)
+//         {
+//             *head = newNode;
+//             *tail = newNode;
+//         }
+//         else
+//         {
+//             (*tail)->next = newNode;
+//             *tail = newNode;
+//         }
+//         return 1;
+//     }
+//     else
+//     {
+//         return 0;
+//     }
+// }
 
 int addTailUser(User **head, User **tail, int idUsuario, int idMusica, int idAlbum, int numPlays)
 {
@@ -171,15 +221,14 @@ int addTailUser(User **head, User **tail, int idUsuario, int idMusica, int idAlb
     }
 }
 
-void processRelUser(Default **list)
+void processRelUser(Default **list, User **head)
 {
     Default *current_i = *list;
-    User *head = NULL;
     User *tail = NULL;
 
     while (current_i != NULL)
     {
-        User *current_user = head;
+        User *current_user = *head;
         while (current_user != NULL)
         {
             if (current_user->idUsuario == current_i->idUsuario && current_user->idMusica == current_i->idMusica)
@@ -192,28 +241,10 @@ void processRelUser(Default **list)
 
         if (current_user == NULL)
         {
-            addTailUser(&head, &tail, current_i->idUsuario, current_i->idMusica, current_i->idAlbum, 1);
-            // User *newUser = malloc(sizeof(User));
-            // newUser->idUsuario = current_i->idUsuario;
-            // newUser->idMusica = current_i->idMusica;
-            // newUser->idAlbum = current_i->idAlbum;
-            // newUser->numPlays = 1;
-            // newUser->next = NULL;
-
-            // if (head == NULL)
-            // {
-            //     head = newUser;
-            //     tail = newUser;
-            // }
-            // else
-            // {
-            //     tail->next = newUser;
-            //     tail = newUser;
-            // }
+            addTailUser(head, &tail, current_i->idUsuario, current_i->idMusica, current_i->idAlbum, 1);
         }
         current_i = current_i->next;
     }
-    writeUser(head);
 }
 
 void writeUser(User *head)
@@ -221,10 +252,109 @@ void writeUser(User *head)
     FILE *file = fopen("usuario_musica.csv", "w");
     User *current = head;
 
-    fprintf(file, "idUsuario,idMusica,idAlbum,numPlays\n");
+    fprintf(file, "idUsuario;idMusica;idAlbum;numPlays\n");
     while (current != NULL)
     {
-        fprintf(file, "%d,%d,%d, %d\n", current->idUsuario, current->idMusica, current->idAlbum,current->numPlays);
+        fprintf(file, "%d;%d;%d;%d\n", current->idUsuario, current->idMusica, current->idAlbum, current->numPlays);
+        current = current->next;
+    }
+    fclose(file);
+}
+
+void processRelMusic(User **list, Music **head)
+{
+    User *current_i = *list;
+    Music *tail = NULL;
+    while (current_i != NULL)
+    {
+        Music *current_music = *head;
+        while (current_music != NULL)
+        {
+            if (current_music->idUsuario == current_i->idUsuario && current_music->numPlays < current_i->numPlays)
+            {
+                current_music->idMusicaPreferida = current_i->numPlays;
+                break;
+            }
+            current_music = current_music->next;
+        }
+
+        if (current_music == NULL)
+        {
+            addTailMusic(head, &tail, current_i->idUsuario, current_i->idMusica, current_i->numPlays);
+        }
+        current_i = current_i->next;
+    }
+    writeMusic(head);
+}
+
+int addTailMusic(Music **head, Music **tail, int idUsuario, int idMusicaPreferida, int numPlays)
+{
+    Music *newNode = malloc(sizeof(Music));
+
+    if (newNode != NULL)
+    {
+        newNode->idUsuario = idUsuario;
+        newNode->idMusicaPreferida = idMusicaPreferida;
+        newNode->numPlays = numPlays;
+        newNode->next = NULL;
+
+        if (*head == NULL)
+        {
+            *head = newNode;
+            *tail = newNode;
+        }
+        else
+        {
+            (*tail)->next = newNode;
+            *tail = newNode;
+        }
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+void freeDefaultList(Default **head)
+{
+    Default *current = *head;
+    Default *nextNode;
+
+    while (current != NULL)
+    {
+        nextNode = current->next;
+        free(current);
+        current = nextNode;
+    }
+
+    *head = NULL;
+}
+
+void freeUserList(User **head)
+{
+    User *current = *head;
+    User *nextNode;
+
+    while (current != NULL)
+    {
+        nextNode = current->next;
+        free(current);
+        current = nextNode;
+    }
+
+    *head = NULL;
+}
+
+void writeMusic(Music *head)
+{
+    FILE *file = fopen("rel_musicas.csv", "w");
+    Music *current = head;
+
+    fprintf(file, "idUsuario;idMusicaPreferida;numPlays\n");
+    while (current != NULL)
+    {
+        fprintf(file, "%d;%d;%d\n", current->idUsuario, current->idMusicaPreferida, current->numPlays);
         current = current->next;
     }
     fclose(file);
