@@ -64,6 +64,7 @@ int main()
             readCSV(input, &DefaultList);
             printf("Carga realizada com sucesso!\n");
         }
+
     }
     return 0;
 }
@@ -72,7 +73,7 @@ void readCSV(char filename[100], Default **list)
 {
     FILE *file = fopen(filename, "r");
     char buffer[255];
-    // Caso não houver nada no arquivo
+    
     if (file == NULL)
     {
         printf("Erro ao abrir o arquivo.\n");
@@ -122,6 +123,7 @@ int addFinal(Default **head, int idUsuario, int idMusica, int idAlbum, int timeS
 
             current->next = newNode;
         }
+        // printf("leu");
         return 1;
     }
     else
