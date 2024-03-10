@@ -43,9 +43,15 @@ int addTailMusic();
 void writeUser();
 void processRelUser();
 void processRelMusic();
+void processRelAlbum();
+void sumAlbum();
 void freeDefaultList();
 void freeUserList();
+void freeMusicList();
+void freeAlbum();
 void writeMusic();
+int addTailAlbum();
+void writeAlbum();
 
 int main()
 {
@@ -53,6 +59,8 @@ int main()
     User *UserList = NULL;
     Music *MusicList = NULL;
     Album *AlbumList = NULL;
+
+    Album *AuxList = NULL;
 
     while (1)
     {
@@ -76,6 +84,14 @@ int main()
             writeUser(UserList);
             processRelMusic(&UserList, &MusicList);
             writeMusic(MusicList);
+            sumAlbum(&UserList, &AuxList);
+            processRelAlbum(&AuxList, &AlbumList);
+            writeAlbum(AlbumList);
+            freeDefaultList(&DefaultList);
+            freeUserList(&UserList);
+            freeMusicList(&MusicList);
+            freeAlbum(&AlbumList);
+            freeAlbum(&AuxList);
             printf("Carga realizada com sucesso!\n");
         }
     }
@@ -270,9 +286,13 @@ void processRelMusic(User **list, Music **head)
         Music *current_music = *head;
         while (current_music != NULL)
         {
-            if (current_music->idUsuario == current_i->idUsuario && current_music->numPlays < current_i->numPlays)
+            if (current_music->idUsuario == current_i->idUsuario)
             {
-                current_music->idMusicaPreferida = current_i->numPlays;
+                if (current_i->numPlays > current_music->numPlays)
+                {
+                    current_music->idMusicaPreferida = current_i->idMusica;
+                    current_music->numPlays = current_i->numPlays;
+                }
                 break;
             }
             current_music = current_music->next;
@@ -284,7 +304,6 @@ void processRelMusic(User **list, Music **head)
         }
         current_i = current_i->next;
     }
-    writeMusic(head);
 }
 
 int addTailMusic(Music **head, Music **tail, int idUsuario, int idMusicaPreferida, int numPlays)
@@ -359,3 +378,135 @@ void writeMusic(Music *head)
     }
     fclose(file);
 }
+
+void sumAlbum(User **list, Album **head)
+{
+  User *current_i = *list;
+  Album *tail = NULL;
+
+  while (current_i != NULL)
+  {
+      Album *current_album = *head;
+      while (current_album != NULL)
+      {
+          if (current_i->idUsuario == current_album->idUsuario && current_i->idAlbum == current_album->idAlbumPreferido)
+          {
+              current_album->numPlays += current_i->numPlays;
+              break;
+          }
+          current_album = current_album->next;
+      }
+
+      if (current_album == NULL)
+      {
+          addTailAlbum(head, &tail, current_i->idUsuario, current_i->idAlbum, current_i->numPlays);
+      }
+      current_i = current_i->next;
+  }
+}
+
+int addTailAlbum(Album **head, Album **tail, int idUsuario, int idAlbumPreferido, int numPlays)
+{
+    Album *newNode = malloc(sizeof(Album));
+
+    if (newNode != NULL)
+    {
+        newNode->idUsuario = idUsuario;
+        newNode->idAlbumPreferido = idAlbumPreferido;
+        newNode->numPlays = numPlays;
+        newNode->next = NULL;
+
+        if (*head == NULL)
+        {
+            *head = newNode;
+            *tail = newNode;
+        }
+        else
+        {
+            (*tail)->next = newNode;
+            *tail = newNode;
+        }
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+void writeAlbum(Album *head)
+{
+    FILE *file = fopen("rel_albuns.csv", "w");
+    Album *current = head;
+
+    fprintf(file, "idUsuario;idAlbumPreferido;numPlays\n");
+    while (current != NULL)
+    {
+        fprintf(file, "%d;%d;%d\n", current->idUsuario, current->idAlbumPreferido, current->numPlays);
+        current = current->next;
+    }
+    fclose(file);
+}
+
+
+void processRelAlbum(Album **list, Album **head)
+{
+    Album *current_i = *list;
+    Album *tail = NULL;
+    while (current_i != NULL)
+    {
+        Album *current_album = *head;
+        while (current_album != NULL)
+        {
+            if (current_album->idUsuario == current_i->idUsuario)
+            {
+                if (current_i->numPlays > current_album->numPlays)
+                {
+                    current_album->idAlbumPreferido = current_i->idAlbumPreferido;
+                    current_album->numPlays = current_i->numPlays;
+                }
+                break;
+            }
+            current_album = current_album->next;
+        }
+
+        if (current_album == NULL)
+        {
+            addTailAlbum(head, &tail, current_i->idUsuario, current_i->idAlbumPreferido, current_i->numPlays);
+        }
+        current_i = current_i->next;
+    }
+}
+
+void freeAlbum(Album **head)
+{
+    Album *current = *head;
+    Album *nextNode;
+
+    while (current != NULL)
+    {
+        nextNode = current->next;
+        free(current);
+        current = nextNode;
+    }
+
+    *head = NULL;
+}
+
+void freeMusicList(Music **head) 
+{
+  Music *current = *head;
+  Music *nextNode;
+
+  while (current != NULL)
+  {
+      nextNode = current->next;
+      free(current);
+      current = nextNode;
+  }
+
+  *head = NULL;
+}
+// amo vcs :3$2
+// amo vcs <3
+// amo vcs S2
